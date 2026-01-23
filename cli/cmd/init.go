@@ -1,16 +1,61 @@
 package cmd
 
 import (
+	stderrors "errors"
+	"path/filepath"
+
+	"cli/internal/logger"
 	"cli/internal/ui"
+	"core/db"
+	kuroerrors "core/errors"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a kuro repository",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ui.Println(ui.Step("Initializing your kuro vault...."))
+		ui.Println(ui.Step("Initializing your kuro repository..."))
+
+		path := filepath.Join(".kuro", "kuro.db")
+
+		database, err := db.InitSQL(path)
+		if err != nil {
+			if stderrors.Is(err, kuroerrors.ErrRepoAlreadyInitialized) {
+				ui.Println(ui.Error("Repository already exists"))
+				return nil
+			}
+
+			logger.Log.Error(
+				"failed to initialize kuro repository",
+				zap.String("path", path),
+				zap.Error(err),
+			)
+
+			ui.Println(ui.Error("Failed to initialize kuro repository"))
+			return err
+		}
+		defer database.Close()
+
+		if err := db.ApplySchema(database); err != nil {
+			logger.Log.Error(
+				"failed to apply schema",
+				zap.String("path", path),
+				zap.Error(err),
+			)
+
+			ui.Println(ui.Error("Failed to apply schema"))
+			return err
+		}
+
+		logger.Log.Info(
+			"kuro repository initialized",
+			zap.String("path", path),
+		)
+
+		ui.Println(ui.Success("Created your kuro repository!"))
 		return nil
 	},
 }
