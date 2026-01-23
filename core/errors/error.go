@@ -9,4 +9,5 @@ var (
 	ErrDatabasePingFailed     = errors.New("failed to ping database")
 	ErrSchemaApplyFailed      = errors.New("failed to apply schema")
 	ErrDataNotFound           = errors.New("data not found")
+	ErrRefNotFound            = errors.New("ref not found")
 )

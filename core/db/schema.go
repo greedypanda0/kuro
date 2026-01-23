@@ -51,5 +51,6 @@ CREATE TABLE IF NOT EXISTS staged_files (
 );
 
 -- Defaults
+INSERT OR IGNORE INTO refs (name, snapshot_hash) VALUES ('main', NULL);
 INSERT OR IGNORE INTO config (key, value) VALUES ('head', 'main');
 `

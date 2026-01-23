@@ -1,0 +1,170 @@
+package cmd
+
+import (
+	"cli/internal/config"
+	"cli/internal/ui"
+	"core/db"
+	"errors"
+	"strings"
+
+	coreerrors "core/errors"
+
+	"github.com/spf13/cobra"
+)
+
+var branchCmd = &cobra.Command{
+	Use:   "branch",
+	Short: "Manage branches",
+	Long:  "Create, list, and delete branches",
+}
+
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List branches",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		database, err := db.OpenDB(config.DatabasePath)
+		if err != nil {
+			ui.Println(ui.Error("Failed to open repository"))
+			return err
+		}
+		defer database.Close()
+
+		refs, err := db.ListRefs(database)
+		if err != nil {
+			ui.Println(ui.Error("Failed to list branches"))
+			return err
+		}
+
+		head, err := db.GetConfig(database, "head")
+		if err != nil {
+			ui.Println(ui.Error("Failed to read HEAD"))
+			return err
+		}
+
+		for _, ref := range refs {
+			if ref.Name == head {
+				ui.Println(ui.ArrowRight(ref.Name))
+			} else {
+				ui.Println(ui.Bullet(ref.Name))
+			}
+		}
+
+		return nil
+	},
+}
+
+var addCmd = &cobra.Command{
+	Use:   "add <name>",
+	Short: "Create a new branch",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		name := args[0]
+
+		if strings.ToLower(name) == "head" {
+			ui.Println(ui.Error("Invalid branch name"))
+			return errors.New("Invalid branch name")
+		}
+
+		database, err := db.OpenDB(config.DatabasePath)
+		if err != nil {
+			ui.Println(ui.Error("Failed to open repository"))
+			return err
+		}
+		defer database.Close()
+
+		_, err = db.GetRef(database, name)
+		if err == nil {
+			ui.Println(ui.Error("Branch already exists"))
+			return nil
+		}
+		if err != coreerrors.ErrRefNotFound {
+			ui.Println(ui.Error("Failed to check branch"))
+			return err
+		}
+
+		head, err := db.GetConfig(database, "head")
+		if err != nil {
+			ui.Println(ui.Error("Failed to read HEAD"))
+			return err
+		}
+
+		currentRef, err := db.GetRef(database, head)
+		if err != nil && err != coreerrors.ErrRefNotFound {
+			ui.Println(ui.Error("Failed to resolve HEAD"))
+			return err
+		}
+
+		var snapshotHash *string
+		if err == coreerrors.ErrRefNotFound || currentRef == nil {
+			// HEAD ref missing: create branch with nil snapshot hash
+			snapshotHash = nil
+		} else {
+			snapshotHash = currentRef.SnapshotHash
+		}
+
+		if err := db.SetRef(database, name, snapshotHash); err != nil {
+			ui.Println(ui.Error("Failed to create branch"))
+			return err
+		}
+
+		ui.Println(ui.Success("Created branch " + name))
+		return nil
+	},
+}
+
+var deleteCmd = &cobra.Command{
+	Use:   "delete <name>",
+	Short: "Delete a branch",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		name := args[0]
+
+		if strings.ToLower(name) == "head" {
+			ui.Println(ui.Error("Cannot delete HEAD"))
+			return errors.New("invalid branch name")
+		}
+
+		database, err := db.OpenDB(config.DatabasePath)
+		if err != nil {
+			ui.Println(ui.Error("Failed to open repository"))
+			return err
+		}
+		defer database.Close()
+
+		head, err := db.GetConfig(database, "head")
+		if err != nil {
+			ui.Println(ui.Error("Failed to read HEAD"))
+			return err
+		}
+
+		if name == head {
+			ui.Println(ui.Error("Cannot delete the current branch"))
+			return nil
+		}
+
+		_, err = db.GetRef(database, name)
+		if err == coreerrors.ErrRefNotFound {
+			ui.Println(ui.Error("Branch does not exist"))
+			return nil
+		}
+		if err != nil {
+			ui.Println(ui.Error("Failed to resolve branch"))
+			return err
+		}
+
+		if err := db.DeleteRef(database, name); err != nil {
+			ui.Println(ui.Error("Failed to delete branch"))
+			return err
+		}
+
+		ui.Println(ui.Success("Deleted branch " + name))
+		return nil
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(branchCmd)
+	branchCmd.AddCommand(listCmd)
+	branchCmd.AddCommand(addCmd)
+	branchCmd.AddCommand(deleteCmd)
+}
