@@ -26,3 +26,6 @@ profile.cov
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# kuro
+.kuro/
