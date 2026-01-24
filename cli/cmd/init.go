@@ -2,6 +2,8 @@ package cmd
 
 import (
 	stderrors "errors"
+	"os"
+	"path/filepath"
 
 	"cli/internal/config"
 	"cli/internal/ui"
@@ -34,9 +36,26 @@ var initCmd = &cobra.Command{
 			return err
 		}
 
+		if err := InitIgnore(config.IgnorePath); err != nil {
+			ui.Println(ui.Error("Failed to initialize .kuroignore"))
+			return err
+		}
+
 		ui.Println(ui.Success("Created your kuro repository!"))
 		return nil
 	},
+}
+
+func InitIgnore(ignorePath string) error {
+	path := filepath.Join(ignorePath)
+
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+
+	content := []byte(".kuro\n.git\nnode_modules\ndist\nbuild\n\n")
+
+	return os.WriteFile(path, content, 0644)
 }
 
 func init() {

@@ -1,18 +1,19 @@
-package internal
+package ops
 
 import (
+	"core/errors"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func ReadKuroIgnore(repoRoot string) ([]string, error) {
-	path := filepath.Join(repoRoot, ".kuro", ".kuroignore")
+func ReadKuroIgnore(ignorePath string) ([]string, error) {
+	path := filepath.Join(ignorePath)
 
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, errors.ErrIgnoreFileNotFound
 		}
 		return nil, err
 	}
@@ -31,4 +32,18 @@ func ReadKuroIgnore(repoRoot string) ([]string, error) {
 	}
 
 	return patterns, nil
+}
+
+func IsIgnored(path string, ignores []string) bool {
+	for _, ig := range ignores {
+		rel, err := filepath.Rel(ig, path)
+		if err != nil {
+			continue
+		}
+
+		if rel == "." || !strings.HasPrefix(rel, "..") {
+			return true
+		}
+	}
+	return false
 }

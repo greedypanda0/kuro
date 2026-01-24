@@ -10,4 +10,5 @@ var (
 	ErrSchemaApplyFailed      = errors.New("failed to apply schema")
 	ErrDataNotFound           = errors.New("data not found")
 	ErrRefNotFound            = errors.New("ref not found")
+	ErrIgnoreFileNotFound     = errors.New("ignore file not found")
 )

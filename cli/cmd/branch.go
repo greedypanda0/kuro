@@ -19,8 +19,9 @@ var branchCmd = &cobra.Command{
 }
 
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List branches",
+	Use:          "list",
+	Short:        "List branches",
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := db.OpenDB(config.DatabasePath)
 		if err != nil {
@@ -54,9 +55,10 @@ var listCmd = &cobra.Command{
 }
 
 var addCmd = &cobra.Command{
-	Use:   "add <name>",
-	Short: "Create a new branch",
-	Args:  cobra.ExactArgs(1),
+	Use:          "add <name>",
+	Short:        "Create a new branch",
+	Args:         cobra.ExactArgs(1),
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
@@ -96,7 +98,6 @@ var addCmd = &cobra.Command{
 
 		var snapshotHash *string
 		if err == coreerrors.ErrRefNotFound || currentRef == nil {
-			// HEAD ref missing: create branch with nil snapshot hash
 			snapshotHash = nil
 		} else {
 			snapshotHash = currentRef.SnapshotHash
@@ -113,9 +114,10 @@ var addCmd = &cobra.Command{
 }
 
 var deleteCmd = &cobra.Command{
-	Use:   "delete <name>",
-	Short: "Delete a branch",
-	Args:  cobra.ExactArgs(1),
+	Use:          "delete <name>",
+	Short:        "Delete a branch",
+	Args:         cobra.ExactArgs(1),
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
