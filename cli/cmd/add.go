@@ -16,10 +16,10 @@ import (
 )
 
 var addCommand = &cobra.Command{
-	Use:   "add <path>",
-	Short: "Add files to the stage",
-	Long:  "Add files or directories to the staging area",
-	Args:  cobra.ExactArgs(1),
+	Use:          "add <path>",
+	Short:        "Add files to the stage",
+	Long:         "Add files or directories to the staging area",
+	Args:         cobra.ExactArgs(1),
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		arg := args[0]
@@ -32,8 +32,13 @@ var addCommand = &cobra.Command{
 		defer db.Close()
 
 		kuroIgnore, err := ops.ReadKuroIgnore(config.IgnorePath)
-		if err == coreerrors.ErrIgnoreFileNotFound {
-			kuroIgnore = []string{}
+		if err != nil {
+			if err == coreerrors.ErrIgnoreFileNotFound {
+				kuroIgnore = []string{}
+			} else {
+				ui.Println(ui.Error("Failed to read .kuroignore"))
+				return err
+			}
 		}
 
 		var path string

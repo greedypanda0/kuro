@@ -16,7 +16,7 @@ func InitSQL(path string) (*sql.DB, error) {
 		return nil, fmt.Errorf("create repo dir: %w", err)
 	}
 
-	databasePath := filepath.Join(path)
+	databasePath := path
 
 	if _, err := os.Stat(databasePath); err == nil {
 		return nil, errors.ErrRepoAlreadyInitialized
@@ -38,7 +38,7 @@ func InitSQL(path string) (*sql.DB, error) {
 }
 
 func OpenDB(path string) (*sql.DB, error) {
-	databasePath := filepath.Join(path)
+	databasePath := path
 
 	if _, err := os.Stat(databasePath); err != nil {
 		if os.IsNotExist(err) {

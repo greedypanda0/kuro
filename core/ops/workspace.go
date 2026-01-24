@@ -38,13 +38,8 @@ func ReadDir(root string) ([]File, error) {
 			return nil
 		}
 
-		rel, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
-		}
-
 		files = append(files, File{
-			Path: rel,
+			Path: path,
 			Name: name,
 		})
 

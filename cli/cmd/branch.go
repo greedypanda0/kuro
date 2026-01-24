@@ -4,8 +4,6 @@ import (
 	"cli/internal/config"
 	"cli/internal/ui"
 	"core/db"
-	"errors"
-	"strings"
 
 	coreerrors "core/errors"
 
@@ -54,7 +52,7 @@ var listCmd = &cobra.Command{
 	},
 }
 
-var addCmd = &cobra.Command{
+var branchAddCmd = &cobra.Command{
 	Use:          "add <name>",
 	Short:        "Create a new branch",
 	Args:         cobra.ExactArgs(1),
@@ -62,9 +60,9 @@ var addCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		if strings.ToLower(name) == "head" {
+		if name == "HEAD" || name == "head" {
 			ui.Println(ui.Error("Invalid branch name"))
-			return errors.New("Invalid branch name")
+			return coreerrors.ErrInvalidBranchName
 		}
 
 		database, err := db.OpenDB(config.DatabasePath)
@@ -77,7 +75,7 @@ var addCmd = &cobra.Command{
 		_, err = db.GetRef(database, name)
 		if err == nil {
 			ui.Println(ui.Error("Branch already exists"))
-			return nil
+			return coreerrors.ErrBranchAlreadyExists
 		}
 		if err != coreerrors.ErrRefNotFound {
 			ui.Println(ui.Error("Failed to check branch"))
@@ -113,7 +111,7 @@ var addCmd = &cobra.Command{
 	},
 }
 
-var deleteCmd = &cobra.Command{
+var branchDeleteCmd = &cobra.Command{
 	Use:          "delete <name>",
 	Short:        "Delete a branch",
 	Args:         cobra.ExactArgs(1),
@@ -121,9 +119,9 @@ var deleteCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		if strings.ToLower(name) == "head" {
+		if name == "HEAD" || name == "head" {
 			ui.Println(ui.Error("Cannot delete HEAD"))
-			return errors.New("invalid branch name")
+			return coreerrors.ErrInvalidBranchName
 		}
 
 		database, err := db.OpenDB(config.DatabasePath)
@@ -141,13 +139,13 @@ var deleteCmd = &cobra.Command{
 
 		if name == head {
 			ui.Println(ui.Error("Cannot delete the current branch"))
-			return nil
+			return coreerrors.ErrCannotDeleteCurrentBranch
 		}
 
 		_, err = db.GetRef(database, name)
 		if err == coreerrors.ErrRefNotFound {
 			ui.Println(ui.Error("Branch does not exist"))
-			return nil
+			return coreerrors.ErrRefNotFound
 		}
 		if err != nil {
 			ui.Println(ui.Error("Failed to resolve branch"))
@@ -167,6 +165,6 @@ var deleteCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(branchCmd)
 	branchCmd.AddCommand(listCmd)
-	branchCmd.AddCommand(addCmd)
-	branchCmd.AddCommand(deleteCmd)
+	branchCmd.AddCommand(branchAddCmd)
+	branchCmd.AddCommand(branchDeleteCmd)
 }

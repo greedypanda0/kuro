@@ -8,7 +8,7 @@ import (
 )
 
 func ReadKuroIgnore(ignorePath string) ([]string, error) {
-	path := filepath.Join(ignorePath)
+	path := ignorePath
 
 	data, err := os.ReadFile(path)
 	if err != nil {

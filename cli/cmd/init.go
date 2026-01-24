@@ -3,7 +3,6 @@ package cmd
 import (
 	stderrors "errors"
 	"os"
-	"path/filepath"
 
 	"cli/internal/config"
 	"cli/internal/ui"
@@ -47,7 +46,7 @@ var initCmd = &cobra.Command{
 }
 
 func InitIgnore(ignorePath string) error {
-	path := filepath.Join(ignorePath)
+	path := ignorePath
 
 	if _, err := os.Stat(path); err == nil {
 		return nil

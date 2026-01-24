@@ -1,9 +1,4 @@
 package core
 
-import (
-	"fmt"
-)
-
-func main() {
-	fmt.Println("Hello, World!")
-}
+// Core package provides VCS functionality with SQLite-backed storage.
+// This is a library package that should be imported by other packages.
