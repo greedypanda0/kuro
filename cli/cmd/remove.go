@@ -1,14 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"cli/internal/config"
 	"cli/internal/ui"
 
 	coredb "core/db"
-	"core/ops"
 
 	"github.com/spf13/cobra"
 )
@@ -22,7 +23,13 @@ var removeCommand = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path := args[0]
 
-		db, err := coredb.OpenDB(config.DatabasePath)
+		root, err := config.RepoRoot()
+		if err != nil {
+			ui.Println(ui.Error("Repository not initialized"))
+			return err
+		}
+
+		db, err := coredb.OpenDB(config.DatabasePathFor(root))
 		if err != nil {
 			ui.Println(ui.Error("Failed to open repository"))
 			return err
@@ -38,24 +45,47 @@ var removeCommand = &cobra.Command{
 			return nil
 		}
 
-		base := filepath.Clean(path)
-		stageFiles, err := coredb.GetStageFiles(db)
+		absPath, err := filepath.Abs(path)
 		if err != nil {
-			ui.Println(ui.Error("Failed to get staged files"))
+			ui.Println(ui.Error("Failed to resolve path"))
 			return err
 		}
 
+		relToRoot, err := filepath.Rel(root, absPath)
+		if err != nil {
+			ui.Println(ui.Error("Failed to resolve repository path"))
+			return err
+		}
+		relToRoot = filepath.ToSlash(relToRoot)
+		if relToRoot == ".." || strings.HasPrefix(relToRoot, "../") {
+			ui.Println(ui.Error("Path is outside the repository"))
+			return fmt.Errorf("path outside repository")
+		}
+
+		base := filepath.ToSlash(filepath.Clean(relToRoot))
 		removed := 0
 
-		for _, file := range stageFiles {
-			if ops.IsIgnored(file.Path, []string{base}) {
-				if err := coredb.RemoveStageFile(db, file.Path); err != nil {
-					ui.Println(ui.Error(fmt.Sprintf("Failed to remove %s", file.Path)))
-					return err
-				}
-				ui.Println(ui.Success(fmt.Sprintf("Removed %s from stage", file.Path)))
-				removed++
+		err = coredb.WithTx(context.Background(), db, func(tx coredb.DBTX) error {
+			stageFiles, err := coredb.GetStageFiles(tx)
+			if err != nil {
+				ui.Println(ui.Error("Failed to get staged files"))
+				return err
 			}
+
+			for _, file := range stageFiles {
+				if file.Path == base || strings.HasPrefix(file.Path, base+"/") {
+					if err := coredb.RemoveStageFile(tx, file.Path); err != nil {
+						return err
+					}
+					ui.Println(ui.Success(fmt.Sprintf("Removed %s from stage", file.Path)))
+					removed++
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			ui.Println(ui.Error("Failed to remove staged files"))
+			return err
 		}
 
 		if removed == 0 {

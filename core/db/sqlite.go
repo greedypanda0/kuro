@@ -61,8 +61,36 @@ func OpenDB(path string) (*sql.DB, error) {
 }
 
 func ApplySchema(db *sql.DB) error {
-	if _, err := db.Exec(schema); err != nil {
+	tx, err := db.Begin()
+	if err != nil {
 		return fmt.Errorf("%w: %v", errors.ErrSchemaApplyFailed, err)
 	}
+
+	if _, err := tx.Exec("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY)"); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("%w: %v", errors.ErrSchemaApplyFailed, err)
+	}
+
+	var current int
+	if err := tx.QueryRow("SELECT COALESCE(MAX(version), 0) FROM schema_migrations").Scan(&current); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("%w: %v", errors.ErrSchemaApplyFailed, err)
+	}
+
+	for i := current; i < len(migrations); i++ {
+		if _, err := tx.Exec(migrations[i]); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("%w: %v", errors.ErrSchemaApplyFailed, err)
+		}
+		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (?)", i+1); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("%w: %v", errors.ErrSchemaApplyFailed, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("%w: %v", errors.ErrSchemaApplyFailed, err)
+	}
+
 	return nil
 }

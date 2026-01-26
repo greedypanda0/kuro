@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"time"
 )
 
@@ -10,7 +9,7 @@ type Stage struct {
 	StagedAt time.Time
 }
 
-func AddStageFile(db *sql.DB, path string) error {
+func AddStageFile(db DBTX, path string) error {
 	_, err := db.Exec(
 		"INSERT OR IGNORE INTO staged_files (path) VALUES (?)",
 		path,
@@ -18,7 +17,7 @@ func AddStageFile(db *sql.DB, path string) error {
 	return err
 }
 
-func RemoveStageFile(db *sql.DB, path string) error {
+func RemoveStageFile(db DBTX, path string) error {
 	_, err := db.Exec(
 		"DELETE FROM staged_files WHERE path = ?",
 		path,
@@ -26,12 +25,12 @@ func RemoveStageFile(db *sql.DB, path string) error {
 	return err
 }
 
-func ClearStage(db *sql.DB) error {
+func ClearStage(db DBTX) error {
 	_, err := db.Exec("DELETE FROM staged_files")
 	return err
 }
 
-func GetStageFiles(db *sql.DB) ([]Stage, error) {
+func GetStageFiles(db DBTX) ([]Stage, error) {
 	rows, err := db.Query(
 		"SELECT path, staged_at FROM staged_files ORDER BY staged_at",
 	)

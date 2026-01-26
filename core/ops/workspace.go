@@ -44,7 +44,7 @@ func ReadDir(root string) ([]File, error) {
 		}
 
 		files = append(files, File{
-			Path: rel,
+			Path: filepath.ToSlash(rel),
 			Name: name,
 		})
 

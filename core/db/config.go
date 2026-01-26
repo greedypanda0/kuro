@@ -5,7 +5,7 @@ import (
 	"database/sql"
 )
 
-func SetConfig(db *sql.DB, key, value string) error {
+func SetConfig(db DBTX, key, value string) error {
 	_, err := db.Exec(
 		"INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
 		key,
@@ -14,7 +14,7 @@ func SetConfig(db *sql.DB, key, value string) error {
 	return err
 }
 
-func GetConfig(db *sql.DB, key string) (string, error) {
+func GetConfig(db DBTX, key string) (string, error) {
 	var value string
 	err := db.QueryRow(
 		"SELECT value FROM config WHERE key = ?",
@@ -31,7 +31,7 @@ func GetConfig(db *sql.DB, key string) (string, error) {
 	return value, nil
 }
 
-func DeleteConfig(db *sql.DB, key string) error {
+func DeleteConfig(db DBTX, key string) error {
 	_, err := db.Exec(
 		"DELETE FROM config WHERE key = ?",
 		key,

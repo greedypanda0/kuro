@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"cli/internal/config"
 	"cli/internal/ui"
@@ -24,26 +26,27 @@ var addCommand = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		arg := args[0]
 
-		db, err := coredb.OpenDB(config.DatabasePath)
+		root, err := config.RepoRoot()
+		if err != nil {
+			ui.Println(ui.Error("Repository not initialized"))
+			return err
+		}
+
+		db, err := coredb.OpenDB(config.DatabasePathFor(root))
 		if err != nil {
 			ui.Println(ui.Error("Failed to open database"))
 			return err
 		}
 		defer db.Close()
 
-		kuroIgnore, err := ops.ReadKuroIgnore(config.IgnorePath)
+		kuroIgnore, err := ops.ReadKuroIgnore(config.IgnorePathFor(root))
 		if err == coreerrors.ErrIgnoreFileNotFound {
 			kuroIgnore = []string{}
 		}
 
 		var path string
 		if arg == "." {
-			cwd, err := os.Getwd()
-			if err != nil {
-				ui.Println(ui.Error("Failed to get current directory"))
-				return err
-			}
-			path = cwd
+			path = root
 		} else {
 			path = arg
 		}
@@ -52,6 +55,17 @@ var addCommand = &cobra.Command{
 		if err != nil {
 			ui.Println(ui.Error("Failed to resolve path"))
 			return err
+		}
+
+		relToRoot, err := filepath.Rel(root, absPath)
+		if err != nil {
+			ui.Println(ui.Error("Failed to resolve repository path"))
+			return err
+		}
+		relToRoot = filepath.ToSlash(relToRoot)
+		if relToRoot == ".." || strings.HasPrefix(relToRoot, "../") {
+			ui.Println(ui.Error("Path is outside the repository"))
+			return fmt.Errorf("path outside repository")
 		}
 
 		info, err := os.Stat(absPath)
@@ -76,20 +90,15 @@ var addCommand = &cobra.Command{
 			}
 
 			for _, file := range files {
-				if ops.IsIgnored(file.Path, kuroIgnore) {
+				relPath := filepath.ToSlash(filepath.Join(relToRoot, file.Path))
+				if ops.IsIgnored(relPath, kuroIgnore) {
 					continue
 				}
-				filesToStage = append(filesToStage, file.Path)
+				filesToStage = append(filesToStage, relPath)
 			}
 		} else {
-			if !ops.IsIgnored(absPath, kuroIgnore) {
-				rel, err := filepath.Rel(".", absPath)
-				if err != nil {
-					ui.Println(ui.Error("Failed to resolve file path"))
-					return err
-				}
-
-				filesToStage = append(filesToStage, rel)
+			if !ops.IsIgnored(relToRoot, kuroIgnore) {
+				filesToStage = append(filesToStage, relToRoot)
 			}
 		}
 
@@ -101,14 +110,20 @@ var addCommand = &cobra.Command{
 
 		ui.Println(ui.Step(fmt.Sprintf("Staging %d file(s)...", total)))
 
-		for i, file := range filesToStage {
-			ratio := float64(i+1) / float64(total)
-			ui.Println(ui.Progress(30, ratio))
+		err = coredb.WithTx(context.Background(), db, func(tx coredb.DBTX) error {
+			for i, file := range filesToStage {
+				ratio := float64(i+1) / float64(total)
+				ui.Println(ui.Progress(30, ratio))
 
-			if err := coredb.AddStageFile(db, file); err != nil {
-				ui.Println(ui.Error(fmt.Sprintf("Failed to stage file: %s", file)))
-				return err
+				if err := coredb.AddStageFile(tx, file); err != nil {
+					return err
+				}
 			}
+			return nil
+		})
+		if err != nil {
+			ui.Println(ui.Error("Failed to stage files"))
+			return err
 		}
 
 		ui.Println(ui.Success(fmt.Sprintf("Staged %d file(s)", total)))

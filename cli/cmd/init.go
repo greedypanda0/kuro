@@ -19,7 +19,16 @@ var initCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ui.Println(ui.Step("Initializing your kuro repository..."))
 
-		database, err := db.InitSQL(config.DatabasePath)
+		root, err := config.RepoRoot()
+		if err != nil {
+			root, err = os.Getwd()
+			if err != nil {
+				ui.Println(ui.Error("Failed to resolve repository root"))
+				return err
+			}
+		}
+
+		database, err := db.InitSQL(config.DatabasePathFor(root))
 		if err != nil {
 			if stderrors.Is(err, kuroerrors.ErrRepoAlreadyInitialized) {
 				ui.Println(ui.Error("Repository already exists"))
@@ -36,7 +45,7 @@ var initCmd = &cobra.Command{
 			return err
 		}
 
-		if err := InitIgnore(config.IgnorePath); err != nil {
+		if err := InitIgnore(config.IgnorePathFor(root)); err != nil {
 			ui.Println(ui.Error("Failed to initialize .kuroignore"))
 			return err
 		}

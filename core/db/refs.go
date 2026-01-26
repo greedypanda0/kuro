@@ -11,7 +11,7 @@ type Ref struct {
 	UpdatedAt    int64
 }
 
-func ListRefs(db *sql.DB) ([]Ref, error) {
+func ListRefs(db DBTX) ([]Ref, error) {
 	var refs []Ref
 
 	rows, err := db.Query("SELECT name, snapshot_hash, updated_at FROM refs")
@@ -44,7 +44,7 @@ func ListRefs(db *sql.DB) ([]Ref, error) {
 	return refs, nil
 }
 
-func SetRef(db *sql.DB, name string, snapshotHash *string) error {
+func SetRef(db DBTX, name string, snapshotHash *string) error {
 	_, err := db.Exec(
 		"INSERT OR IGNORE INTO refs (name, snapshot_hash) VALUES (?, ?)",
 		name,
@@ -53,7 +53,7 @@ func SetRef(db *sql.DB, name string, snapshotHash *string) error {
 	return err
 }
 
-func GetRef(db *sql.DB, name string) (*Ref, error) {
+func GetRef(db DBTX, name string) (*Ref, error) {
 	var (
 		ref          Ref
 		snapshotHash sql.NullString
@@ -78,7 +78,7 @@ func GetRef(db *sql.DB, name string) (*Ref, error) {
 	return &ref, nil
 }
 
-func DeleteRef(db *sql.DB, name string) error {
+func DeleteRef(db DBTX, name string) error {
 	res, err := db.Exec(
 		"DELETE FROM refs WHERE name = ?",
 		name,

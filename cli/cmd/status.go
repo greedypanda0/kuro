@@ -20,7 +20,13 @@ var StatusCommand = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		stageFlag, _ := cmd.Flags().GetBool("stage")
 
-		db, err := coredb.OpenDB(config.DatabasePath)
+		root, err := config.RepoRoot()
+		if err != nil {
+			ui.Println(ui.Error("Repository not initialized"))
+			return err
+		}
+
+		db, err := coredb.OpenDB(config.DatabasePathFor(root))
 		if err != nil {
 			ui.Println(ui.Error("Failed to open repository"))
 			return err

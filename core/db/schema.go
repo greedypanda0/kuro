@@ -1,7 +1,7 @@
 package db
 
-const schema = `
-PRAGMA foreign_keys = ON;
+var migrations = []string{
+	`PRAGMA foreign_keys = ON;
 
 -- Content-addressed storage
 CREATE TABLE IF NOT EXISTS objects (
@@ -53,4 +53,5 @@ CREATE TABLE IF NOT EXISTS staged_files (
 -- Defaults
 INSERT OR IGNORE INTO refs (name, snapshot_hash) VALUES ('main', NULL);
 INSERT OR IGNORE INTO config (key, value) VALUES ('head', 'main');
-`
+`,
+}
