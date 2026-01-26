@@ -16,10 +16,10 @@ import (
 )
 
 var addCommand = &cobra.Command{
-	Use:   "add <path>",
-	Short: "Add files to the stage",
-	Long:  "Add files or directories to the staging area",
-	Args:  cobra.ExactArgs(1),
+	Use:          "add <path>",
+	Short:        "Add files to the stage",
+	Long:         "Add files or directories to the staging area",
+	Args:         cobra.ExactArgs(1),
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		arg := args[0]
@@ -83,7 +83,13 @@ var addCommand = &cobra.Command{
 			}
 		} else {
 			if !ops.IsIgnored(absPath, kuroIgnore) {
-				filesToStage = append(filesToStage, absPath)
+				rel, err := filepath.Rel(".", absPath)
+				if err != nil {
+					ui.Println(ui.Error("Failed to resolve file path"))
+					return err
+				}
+
+				filesToStage = append(filesToStage, rel)
 			}
 		}
 
