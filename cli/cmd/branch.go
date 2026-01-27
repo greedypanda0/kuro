@@ -13,13 +13,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var branchCmd = &cobra.Command{
+var branchCommand = &cobra.Command{
 	Use:   "branch",
 	Short: "Manage branches",
 	Long:  "Create, list, and delete branches",
 }
 
-var listCmd = &cobra.Command{
+var listBranchCommand = &cobra.Command{
 	Use:          "list",
 	Short:        "List branches",
 	SilenceUsage: true,
@@ -61,8 +61,8 @@ var listCmd = &cobra.Command{
 	},
 }
 
-var addCmd = &cobra.Command{
-	Use:          "add <name>",
+var createBranchCommand = &cobra.Command{
+	Use:          "create <name>",
 	Short:        "Create a new branch",
 	Args:         cobra.ExactArgs(1),
 	SilenceUsage: true,
@@ -138,7 +138,7 @@ var addCmd = &cobra.Command{
 	},
 }
 
-var deleteCmd = &cobra.Command{
+var deleteBranchCommand = &cobra.Command{
 	Use:          "delete <name>",
 	Short:        "Delete a branch",
 	Args:         cobra.ExactArgs(1),
@@ -208,8 +208,8 @@ var deleteCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(branchCmd)
-	branchCmd.AddCommand(listCmd)
-	branchCmd.AddCommand(addCmd)
-	branchCmd.AddCommand(deleteCmd)
+	rootCommand.AddCommand(branchCommand)
+	branchCommand.AddCommand(listBranchCommand)
+	branchCommand.AddCommand(createBranchCommand)
+	branchCommand.AddCommand(deleteBranchCommand)
 }

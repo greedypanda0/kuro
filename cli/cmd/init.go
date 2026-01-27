@@ -13,19 +13,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var initCmd = &cobra.Command{
+var initCommand = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a kuro repository",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ui.Println(ui.Step("Initializing your kuro repository..."))
 
-		root, err := config.RepoRoot()
+		root, err := os.Getwd()
 		if err != nil {
-			root, err = os.Getwd()
-			if err != nil {
-				ui.Println(ui.Error("Failed to resolve repository root"))
-				return err
-			}
+			ui.Println(ui.Error("Failed to resolve repository root"))
+			return err
+		}
+
+		if _, err := os.Stat(filepath.Join(root, config.RepoDir)); err == nil {
+			ui.Println(ui.Error("Repository already exists"))
+			return nil
+		} else if !os.IsNotExist(err) {
+			ui.Println(ui.Error("Failed to check repository"))
+			return err
 		}
 
 		database, err := db.InitSQL(config.DatabasePathFor(root))
@@ -68,5 +73,5 @@ func InitIgnore(ignorePath string) error {
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
+	rootCommand.AddCommand(initCommand)
 }

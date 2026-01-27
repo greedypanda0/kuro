@@ -11,12 +11,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var StatusCommand = &cobra.Command{
+var statusCommand = &cobra.Command{
 	Use:           "status",
 	Short:         "Show the status",
 	Long:          "Show the status of various things",
 	SilenceUsage:  true,
-	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		stageFlag, _ := cmd.Flags().GetBool("stage")
 
@@ -79,6 +78,6 @@ var StatusCommand = &cobra.Command{
 }
 
 func init() {
-	StatusCommand.Flags().BoolP("stage", "s", false, "show current stage files")
-	rootCmd.AddCommand(StatusCommand)
+	statusCommand.Flags().BoolP("stage", "s", false, "show current stage files")
+	rootCommand.AddCommand(statusCommand)
 }

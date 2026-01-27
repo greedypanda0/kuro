@@ -97,5 +97,5 @@ var removeCommand = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(removeCommand)
+	rootCommand.AddCommand(removeCommand)
 }

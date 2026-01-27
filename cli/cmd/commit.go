@@ -23,7 +23,7 @@ type objectFile struct {
 	Path    string
 }
 
-var commitCmd = &cobra.Command{
+var commitCommand = &cobra.Command{
 	Use:          "commit",
 	Short:        "Create a commit",
 	SilenceUsage: true,
@@ -162,6 +162,6 @@ var commitCmd = &cobra.Command{
 }
 
 func init() {
-	commitCmd.Flags().StringP("message", "m", "", "commit message")
-	rootCmd.AddCommand(commitCmd)
+	commitCommand.Flags().StringP("message", "m", "", "commit message")
+	rootCommand.AddCommand(commitCommand)
 }

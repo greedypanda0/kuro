@@ -6,14 +6,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
+var rootCommand = &cobra.Command{
 	Use:   "kuro",
 	Short: "kuro is a local-first VCS",
 	Long:  "kuro is a local-first version control system",
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := rootCommand.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
