@@ -53,6 +53,27 @@ func SetRef(db DBTX, name string, snapshotHash *string) error {
 	return err
 }
 
+func UpdateRef(db DBTX, name string, snapshotHash *string) error {
+	res, err := db.Exec(
+		"UPDATE refs SET snapshot_hash = ?, updated_at = (strftime('%s', 'now')) WHERE name = ?",
+		snapshotHash,
+		name,
+	)
+	if err != nil {
+		return err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return errors.ErrRefNotFound
+	}
+
+	return nil
+}
+
 func GetRef(db DBTX, name string) (*Ref, error) {
 	var (
 		ref          Ref

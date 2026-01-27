@@ -5,7 +5,13 @@ import (
 	"encoding/hex"
 )
 
-func Hash(data []byte) string {
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
+func Hash(parts ...[]byte) string {
+	hasher := sha256.New()
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+		_, _ = hasher.Write(part)
+	}
+	return hex.EncodeToString(hasher.Sum(nil))
 }
