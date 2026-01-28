@@ -85,3 +85,27 @@ func ListSnapshotFiles(db DBTX, snapshotHash string) ([]SnapshotFile, error) {
 
 	return files, nil
 }
+
+func CompareSnapshotFiles(a, b []SnapshotFile) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	m := make(map[string]string, len(a))
+	for _, f := range a {
+		m[f.Path] = f.ObjectHash
+	}
+
+	for _, f := range b {
+		hash, ok := m[f.Path]
+		if !ok {
+			return false
+		}
+		if hash != f.ObjectHash {
+			return false
+		}
+	}
+
+	return true
+}
+

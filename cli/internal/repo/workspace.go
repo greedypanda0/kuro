@@ -6,6 +6,7 @@ import (
 	"core/ops"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -15,9 +16,9 @@ func ResetWorkspace(root string, db coredb.DBTX, snapshotHash string) error {
 		return err
 	}
 
-	expected := make(map[string]string, len(snapshotFiles))
-	for _, file := range snapshotFiles {
-		expected[file.Path] = file.ObjectHash
+	expected := make(map[string]struct{}, len(snapshotFiles))
+	for _, f := range snapshotFiles {
+		expected[f.Path] = struct{}{}
 	}
 
 	currentFiles, err := ops.ReadDir(root)
@@ -33,39 +34,63 @@ func ResetWorkspace(root string, db coredb.DBTX, snapshotHash string) error {
 		if _, ok := expected[file.Path]; ok {
 			continue
 		}
-		absPath := filepath.Clean(filepath.Join(root, filepath.FromSlash(file.Path)))
 
-		info, err := os.Lstat(absPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
+		abs := filepath.Join(root, filepath.FromSlash(file.Path))
+		if err := os.Remove(abs); err != nil && !os.IsNotExist(err) {
 			return err
-		}
-
-		if info.IsDir() {
-			if err := os.RemoveAll(absPath); err != nil {
-				return err
-			}
-		} else {
-			if err := os.Remove(absPath); err != nil {
-				return err
-			}
 		}
 	}
 
-	for path, objectHash := range expected {
-		obj, err := coredb.GetObject(db, objectHash)
+	for _, f := range snapshotFiles {
+		obj, err := coredb.GetObject(db, f.ObjectHash)
 		if err != nil {
 			return err
 		}
 
-		absPath := filepath.Clean(filepath.Join(root, filepath.FromSlash(path)))
-		if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
+		abs := filepath.Join(root, filepath.FromSlash(f.Path))
+		if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(absPath, obj.Content, 0o644); err != nil {
+		if err := os.WriteFile(abs, obj.Content, 0o644); err != nil {
 			return err
+		}
+	}
+
+	var dirs []string
+
+	err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() || path == root {
+			return nil
+		}
+
+		rel, err := filepath.Rel(root, path)
+		if err == nil && isKuroPath(rel) {
+			return filepath.SkipDir
+		}
+
+		dirs = append(dirs, path)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(dirs, func(i, j int) bool {
+		return len(dirs[i]) > len(dirs[j])
+	})
+
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		if len(entries) == 0 {
+			_ = os.Remove(dir)
 		}
 	}
 

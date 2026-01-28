@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -103,29 +102,6 @@ var addCommand = &cobra.Command{
 			}
 		}
 
-		filtered := make([]string, 0, len(filesToStage))
-		for _, file := range filesToStage {
-			absPath := filepath.Clean(filepath.Join(root, filepath.FromSlash(file)))
-			content, err := os.ReadFile(absPath)
-			if err != nil {
-				ui.Println(ui.Error("Failed to read file"))
-				return err
-			}
-
-			objectHash := ops.Hash(content)
-			_, err = coredb.GetObject(db, objectHash)
-			if err == nil {
-				continue
-			}
-			if !errors.Is(err, coreerrors.ErrObjectNotFound) {
-				ui.Println(ui.Error("Failed to check object"))
-				return err
-			}
-
-			filtered = append(filtered, file)
-		}
-
-		filesToStage = filtered
 		total := len(filesToStage)
 		if total == 0 {
 			ui.Println(ui.Step("Nothing to stage"))
