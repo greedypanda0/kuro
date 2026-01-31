@@ -95,11 +95,17 @@ var commitCommand = &cobra.Command{
 				})
 			}
 
-			currentSnapshotFiles, err := coredb.ListSnapshotFiles(tx, *ref.SnapshotHash)
-			if err != nil {
-				ui.Println(ui.Error("Failed to list snapshot files"))
-				return err
+			currentSnapshotFiles := []coredb.SnapshotFile{}
+
+			if ref != nil && ref.SnapshotHash != nil {
+				var err error
+				currentSnapshotFiles, err = coredb.ListSnapshotFiles(tx, *ref.SnapshotHash)
+				if err != nil {
+					ui.Println(ui.Error("Failed to list snapshot files"))
+					return err
+				}
 			}
+
 			newSnapshotFiles := []coredb.SnapshotFile{}
 			for _, file := range objectFiles {
 				newSnapshotFiles = append(newSnapshotFiles, coredb.SnapshotFile{
