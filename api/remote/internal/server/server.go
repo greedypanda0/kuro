@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"api/remote/database"
 	"api/remote/internal/config"
 	"api/remote/internal/handlers"
 	"api/remote/internal/logger"
@@ -17,9 +18,13 @@ func New(cfg config.Config, log *logger.Logger) *http.Server {
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
+	db, err := database.OpenDB()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	router := gin.New()
-	handlers.RegisterRoutes(router, log)
+	handlers.RegisterRoutes(router, log, db)
 
 	return &http.Server{
 		Addr:         cfg.HTTP.Addr,

@@ -5,18 +5,33 @@ import (
 	"time"
 
 	"api/remote/internal/build"
+	"api/remote/internal/handlers/repo"
 	"api/remote/internal/logger"
+	"api/remote/internal/middleware"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func RegisterRoutes(router *gin.Engine, log *logger.Logger) {
+func RegisterRoutes(router *gin.Engine, log *logger.Logger, db *pgxpool.Pool) {
 	router.Use(requestLogger(log))
 	router.Use(gin.Recovery())
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 
-	router.GET("/health", healthHandler())
-	router.GET("/version", versionHandler())
-	RegisterPingRoutes(router)
+	apiRouter := router.Group("/api")
+	apiRouter.Use(middleware.AuthMiddleware(db))
+
+	apiRouter.GET("/health", healthHandler())
+	apiRouter.GET("/version", versionHandler())
+	RegisterPingRoutes(apiRouter)
+	repo.RegisterRepoRoutes(apiRouter, db)
+
 }
 
 func healthHandler() gin.HandlerFunc {
