@@ -1,10 +1,12 @@
 package database
 
 const schema = `
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- repositories
 
 CREATE TABLE IF NOT EXISTS repositories (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     description TEXT NOT NULL,
     author TEXT NOT NULL,

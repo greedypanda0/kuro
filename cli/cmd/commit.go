@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -32,6 +33,12 @@ var commitCommand = &cobra.Command{
 		if strings.TrimSpace(message) == "" {
 			ui.Println(ui.Error("Commit message required"))
 			return errors.New("commit message required")
+		}
+
+		cfg, err := config.LoadConfig()
+		if err != nil {
+			ui.Println(ui.Error("Failed to load config"))
+			return err
 		}
 
 		root, err := config.RepoRoot()
@@ -119,7 +126,12 @@ var commitCommand = &cobra.Command{
 				return nil
 			}
 
-			user := "root"
+			user := cfg.Name
+			if user == "" {
+				ui.Println(ui.Error("No user name found\nadd one via kuro config --name <name>"))
+				return fmt.Errorf("no name found")
+			}
+
 			var parentHash *string
 			if ref != nil && ref.SnapshotHash != nil {
 				parentHash = ref.SnapshotHash

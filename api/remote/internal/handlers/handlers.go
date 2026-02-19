@@ -6,6 +6,7 @@ import (
 
 	"api/remote/internal/build"
 	"api/remote/internal/handlers/repo"
+	"api/remote/internal/handlers/users"
 	"api/remote/internal/logger"
 	"api/remote/internal/middleware"
 
@@ -30,7 +31,8 @@ func RegisterRoutes(router *gin.Engine, log *logger.Logger, db *pgxpool.Pool) {
 	apiRouter.GET("/health", healthHandler())
 	apiRouter.GET("/version", versionHandler())
 	RegisterPingRoutes(apiRouter)
-	repo.RegisterRepoRoutes(apiRouter, db)
+	repo.RegisterRepositoryRoutes(apiRouter, db)
+	users.RegisterUserRoutes(apiRouter, db)
 
 }
 

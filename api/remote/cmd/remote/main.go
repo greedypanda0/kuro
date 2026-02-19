@@ -8,9 +8,12 @@ import (
 	"syscall"
 	"time"
 
+	"api/remote/database"
 	"api/remote/internal/config"
 	"api/remote/internal/logger"
 	"api/remote/internal/server"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -21,7 +24,12 @@ func main() {
 		_ = log.Sync()
 	}()
 
-	httpServer := server.New(cfg, log)
+	db, err := database.OpenDB()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	httpServer := server.New(cfg, log, db)
 
 	go func() {
 		log.Info("remote api starting", logger.String("addr", cfg.HTTP.Addr))
@@ -30,10 +38,10 @@ func main() {
 		}
 	}()
 
-	shutdownOnSignal(log, httpServer, cfg.HTTP.ShutdownTimeout)
+	shutdownOnSignal(log, httpServer, cfg.HTTP.ShutdownTimeout, db)
 }
 
-func shutdownOnSignal(log *logger.Logger, httpServer *http.Server, timeout time.Duration) {
+func shutdownOnSignal(log *logger.Logger, httpServer *http.Server, timeout time.Duration, db *pgxpool.Pool) {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	<-signals
@@ -41,6 +49,7 @@ func shutdownOnSignal(log *logger.Logger, httpServer *http.Server, timeout time.
 	log.Info("shutdown signal received")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+	defer db.Close()
 
 	if err := httpServer.Shutdown(ctx); err != nil {
 		log.Error("graceful shutdown failed", logger.Error(err))

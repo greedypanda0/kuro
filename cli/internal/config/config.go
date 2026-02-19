@@ -8,6 +8,7 @@ import (
 const DatabasePath = ".kuro/kuro.db"
 const IgnorePath = ".kuro/.kuroignore"
 const RepoDir = ".kuro"
+const ApiUrl = "http://localhost:8080/api"
 
 func RepoRoot() (string, error) {
 	cwd, err := os.Getwd()
