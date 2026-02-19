@@ -1,4 +1,4 @@
-module cli
+module github.com/greedypanda0/kuro/cli
 
 go 1.24.6
 

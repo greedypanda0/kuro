@@ -1,8 +1,8 @@
 package main
 
 import (
-	"cli/cmd"
-	"cli/internal/logger"
+	"github.com/greedypanda0/kuro/cli/cmd"
+	"github.com/greedypanda0/kuro/cli/internal/logger"
 )
 
 func main() {

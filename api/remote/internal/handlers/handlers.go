@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"api/remote/internal/build"
-	"api/remote/internal/handlers/repo"
-	"api/remote/internal/handlers/users"
-	"api/remote/internal/logger"
-	"api/remote/internal/middleware"
+	"github.com/greedypanda0/kuro/api/remote/internal/build"
+	"github.com/greedypanda0/kuro/api/remote/internal/handlers/repo"
+	"github.com/greedypanda0/kuro/api/remote/internal/handlers/users"
+	"github.com/greedypanda0/kuro/api/remote/internal/logger"
+	"github.com/greedypanda0/kuro/api/remote/internal/middleware"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"

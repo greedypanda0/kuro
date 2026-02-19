@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"cli/internal/config"
-	"cli/internal/ui"
-	"core/db"
-	kuroerrors "core/errors"
+	"github.com/greedypanda0/kuro/cli/internal/config"
+	"github.com/greedypanda0/kuro/cli/internal/ui"
+	"github.com/greedypanda0/kuro/core/db"
+	kuroerrors "github.com/greedypanda0/kuro/core/errors"
 
 	"github.com/spf13/cobra"
 )

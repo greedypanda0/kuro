@@ -1,9 +1,9 @@
 package repo
 
 import (
-	"cli/internal/config"
-	coredb "core/db"
-	"core/ops"
+	"github.com/greedypanda0/kuro/cli/internal/config"
+	coredb "github.com/greedypanda0/kuro/core/db"
+	"github.com/greedypanda0/kuro/core/ops"
 	"os"
 	"path/filepath"
 	"sort"

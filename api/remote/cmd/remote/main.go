@@ -8,10 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"api/remote/database"
-	"api/remote/internal/config"
-	"api/remote/internal/logger"
-	"api/remote/internal/server"
+	"github.com/greedypanda0/kuro/api/remote/database"
+	"github.com/greedypanda0/kuro/api/remote/internal/config"
+	"github.com/greedypanda0/kuro/api/remote/internal/logger"
+	"github.com/greedypanda0/kuro/api/remote/internal/server"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

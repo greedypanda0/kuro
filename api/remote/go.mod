@@ -1,4 +1,4 @@
-module api/remote
+module github.com/greedypanda0/kuro/api/remote
 
 go 1.24.6
 

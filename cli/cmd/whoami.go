@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"cli/internal/config"
-	"cli/internal/ui"
+	"github.com/greedypanda0/kuro/cli/internal/config"
+	"github.com/greedypanda0/kuro/cli/internal/ui"
 	"encoding/json"
 	"fmt"
 	"net/http"

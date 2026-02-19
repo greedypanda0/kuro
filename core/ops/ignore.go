@@ -1,7 +1,7 @@
 package ops
 
 import (
-	"core/errors"
+	"github.com/greedypanda0/kuro/core/errors"
 	"os"
 	"path"
 	"path/filepath"

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"api/remote/internal/config"
+	"github.com/greedypanda0/kuro/api/remote/internal/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

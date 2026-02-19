@@ -1,7 +1,7 @@
 package db
 
 import (
-	"core/errors"
+	"github.com/greedypanda0/kuro/core/errors"
 	"database/sql"
 	"fmt"
 	"os"

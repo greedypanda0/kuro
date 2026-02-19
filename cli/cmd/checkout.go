@@ -5,12 +5,12 @@ package cmd
 import (
 	"fmt"
 
-	"cli/internal/config"
-	"cli/internal/repo"
-	"cli/internal/ui"
+	"github.com/greedypanda0/kuro/cli/internal/config"
+	"github.com/greedypanda0/kuro/cli/internal/repo"
+	"github.com/greedypanda0/kuro/cli/internal/ui"
 
-	coredb "core/db"
-	coreerrors "core/errors"
+	coredb "github.com/greedypanda0/kuro/core/db"
+	coreerrors "github.com/greedypanda0/kuro/core/errors"
 
 	"github.com/spf13/cobra"
 )

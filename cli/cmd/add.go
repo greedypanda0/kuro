@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"cli/internal/config"
-	"cli/internal/ui"
+	"github.com/greedypanda0/kuro/cli/internal/config"
+	"github.com/greedypanda0/kuro/cli/internal/ui"
 
-	coredb "core/db"
-	coreerrors "core/errors"
-	"core/ops"
+	coredb "github.com/greedypanda0/kuro/core/db"
+	coreerrors "github.com/greedypanda0/kuro/core/errors"
+	"github.com/greedypanda0/kuro/core/ops"
 
 	"github.com/spf13/cobra"
 )

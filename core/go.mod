@@ -1,4 +1,4 @@
-module core
+module github.com/greedypanda0/kuro/core
 
 go 1.24.6
 

@@ -9,11 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	"cli/internal/config"
-	"cli/internal/ui"
+	"github.com/greedypanda0/kuro/cli/internal/config"
+	"github.com/greedypanda0/kuro/cli/internal/ui"
 
-	coredb "core/db"
-	"core/ops"
+	coredb "github.com/greedypanda0/kuro/core/db"
+	"github.com/greedypanda0/kuro/core/ops"
 
 	"github.com/spf13/cobra"
 )

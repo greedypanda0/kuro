@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"api/remote/internal/config"
-	"api/remote/internal/handlers"
-	"api/remote/internal/logger"
+	"github.com/greedypanda0/kuro/api/remote/internal/config"
+	"github.com/greedypanda0/kuro/api/remote/internal/handlers"
+	"github.com/greedypanda0/kuro/api/remote/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"

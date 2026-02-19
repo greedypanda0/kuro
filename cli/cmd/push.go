@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"bytes"
-	"cli/internal/config"
-	"cli/internal/ui"
-	coredb "core/db"
+	"github.com/greedypanda0/kuro/cli/internal/config"
+	"github.com/greedypanda0/kuro/cli/internal/ui"
+	coredb "github.com/greedypanda0/kuro/core/db"
 	"encoding/json"
 	"fmt"
 	"io"
