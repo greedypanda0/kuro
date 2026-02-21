@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,15 +16,10 @@ import (
 )
 
 type Repository struct {
-	ID          int       `json:"id"`
-	Name        string    `json:"name"`
-	Author      string    `json:"author"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-}
-
-type uploadMetadata struct {
-	Name string `json:"name"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	UserID    string    `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func RegisterRepositoryRoutes(router gin.IRoutes, db *pgxpool.Pool) {
@@ -39,10 +33,10 @@ func getRepositoriesHandler(db *pgxpool.Pool) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		name := c.Query("name")
-		author := c.Query("author")
+		userID := c.Query("user_id")
 
 		query := `
-			SELECT id, name, author, description, created_at
+			SELECT id, name, user_id, created_at
 			FROM repositories
 		`
 
@@ -56,9 +50,9 @@ func getRepositoriesHandler(db *pgxpool.Pool) gin.HandlerFunc {
 			i++
 		}
 
-		if author != "" {
-			conditions = append(conditions, fmt.Sprintf("author = $%d", i))
-			args = append(args, author)
+		if userID != "" {
+			conditions = append(conditions, fmt.Sprintf("user_id = $%d", i))
+			args = append(args, userID)
 			i++
 		}
 
@@ -82,13 +76,13 @@ func getRepositoriesHandler(db *pgxpool.Pool) gin.HandlerFunc {
 			if err := rows.Scan(
 				&r.ID,
 				&r.Name,
-				&r.Author,
-				&r.Description,
+				&r.UserID,
 				&r.CreatedAt,
 			); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "failed to scan repository",
 				})
+				fmt.Println("Error", err.Error())
 				return
 			}
 			repos = append(repos, r)
@@ -112,7 +106,7 @@ func getRepositoryHandler(db *pgxpool.Pool) gin.HandlerFunc {
 		id := c.Param("id")
 
 		query := `
-			SELECT id, name, author, description, created_at
+			SELECT id, name, user_id, created_at
 			FROM repositories
 			WHERE id = $1
 		`
@@ -123,8 +117,7 @@ func getRepositoryHandler(db *pgxpool.Pool) gin.HandlerFunc {
 		err := row.Scan(
 			&r.ID,
 			&r.Name,
-			&r.Author,
-			&r.Description,
+			&r.UserID,
 			&r.CreatedAt,
 		)
 
@@ -148,81 +141,100 @@ func getRepositoryHandler(db *pgxpool.Pool) gin.HandlerFunc {
 
 func postRepositoryHandler(db *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		var metadata uploadMetadata
-		var fileReader io.Reader
 		userID := c.MustGet("user_id").(string)
+		ctx := c.Request.Context()
 
-		contentType := c.ContentType()
-
-		switch {
-		case strings.HasPrefix(contentType, "multipart/form-data"):
-			if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid multipart form"})
-				return
-			}
-
-			metadataStr := c.PostForm("metadata")
-			if metadataStr == "" {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "missing metadata"})
-				return
-			}
-
-			if err := json.Unmarshal([]byte(metadataStr), &metadata); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid metadata"})
-				return
-			}
-
-			fileHeader, err := c.FormFile("file")
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "missing file"})
-				return
-			}
-
-			file, err := fileHeader.Open()
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open uploaded file"})
-				return
-			}
-			defer file.Close()
-
-			fileReader = file
-
-		case strings.HasPrefix(contentType, "application/octet-stream"):
-			metadata.Name = c.GetHeader("X-Name")
-
-			if metadata.Name == "" {
-				metadata.Name = c.Query("name")
-			}
-
-			fileReader = c.Request.Body
-
-		default:
-			c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "unsupported content type"})
+		if !strings.HasPrefix(c.ContentType(), "application/octet-stream") {
+			c.JSON(http.StatusUnsupportedMediaType, gin.H{
+				"error": "content type must be application/octet-stream",
+			})
 			return
 		}
 
-		if userID == "" || metadata.Name == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing user_id or db_name"})
+		remote := c.GetHeader("X-Remote")
+		if remote == "" {
+			remote = c.Query("remote")
+		}
+
+		if remote == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "missing remote",
+			})
+			return
+		}
+
+		remoteParts := strings.SplitN(remote, "/", 2)
+		// user := remoteParts[0]
+		repo := remoteParts[1]
+		row := db.QueryRow(ctx, "SELECT user_id FROM repositories WHERE name = $1", repo)
+		var repoUserID string
+		if err := row.Scan(&repoUserID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to fetch user",
+			})
+			return
+		}
+		
+		if repoUserID != userID {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "repository does not belong to user",
+			})
 			return
 		}
 
 		dirPath := filepath.Join("data", userID)
 		if err := os.MkdirAll(dirPath, 0o755); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user data directory"})
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to create user data directory",
+			})
 			return
 		}
 
-		dstPath := filepath.Join(dirPath, "temp_"+metadata.Name+".db")
+		dstPath := filepath.Join(dirPath, "temp_"+repo+".db")
+
 		dstFile, err := os.Create(dstPath)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create database file"})
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to create database file",
+			})
 			return
 		}
-		defer dstFile.Close()
 
-		if _, err := io.Copy(dstFile, fileReader); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save database file"})
+		if _, err := io.Copy(dstFile, c.Request.Body); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to save database file",
+			})
+			return
+		}
+
+		if err := dstFile.Sync(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to sync database file",
+			})
+			return
+		}
+
+		if err := dstFile.Close(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to close database file",
+			})
+			return
+		}
+
+		finalPath := filepath.Join(dirPath, repo+".db")
+		tempPath := filepath.Join(dirPath, "temp_"+repo+".db")
+
+		if err := os.Remove(finalPath); err != nil && !os.IsNotExist(err) {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to remove old repository",
+			})
+			return
+		}
+
+		if err := os.Rename(tempPath, finalPath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to finalize repository",
+			})
 			return
 		}
 

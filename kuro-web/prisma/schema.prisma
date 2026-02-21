@@ -44,23 +44,29 @@ model Session {
 model User {
   id             String    @id @default(cuid())
   name           String?
+  username       String?
   email          String?   @unique
   emailVerified  DateTime?
   image          String?
+  
   accounts       Account[]
   sessions       Session[]
   authTokens     AuthTokens[]
+  repositories   Repository[]
 
   @@map("users")
 }
 
 model Repository {
-  id          String @id
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   description String
-  author      String
+  userId      String @map("user_id")
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
-  
+
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
   @@map("repositories")
 }
 

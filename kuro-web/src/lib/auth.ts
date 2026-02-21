@@ -11,32 +11,49 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     GitHub({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      profile: (profile) => ({
+        name: profile.name ?? profile.login,
+        email: profile.email,
+        image: profile.avatar_url,
+        username: profile.login,
+      }),
     }),
   ],
   callbacks: {
     session: async ({ session, user }) => {
-      // const dbSession = await prisma.session.findUnique({
-      //   where: { sessionToken: session.sessionToken },
-      // });
-      // if (!dbSession) throw new Error("Session not found");
+      const dbSession = await prisma.session.findUnique({
+        where: { sessionToken: session.sessionToken },
+      });
+      if (!dbSession) throw new Error("Session not found");
 
-      // if (!dbSession.token) {
-      //   const { os, browser } = await detectDeviceFromHeaders();
-      //   dbSession.token = hashKey(generateAuthKey());
-      //   await prisma.session.update({
-      //     where: { id: dbSession.id },
-      //     data: { token: dbSession.token, userAgent: os, deviceName: browser },
-      //   });
-      // }
+      if (!dbSession.deviceName) {
+        const { os, browser } = await detectDeviceFromHeaders();
+        await prisma.session.update({
+          where: { id: dbSession.id },
+          data: {
+            userAgent: os,
+            deviceName: browser,
+          },
+        });
+      }
 
       return {
         ...session,
-        // token: dbSession.token,
         user: {
           ...session.user,
           id: user.id,
         },
       };
+    },
+  },
+  events: {
+    async createUser({ user }) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          username: user.username ?? undefined,
+        },
+      });
     },
   },
   pages: {
