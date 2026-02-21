@@ -29,6 +29,9 @@ func ReadDir(root string) ([]File, error) {
 			return err
 		}
 		if d.IsDir() {
+			if strings.HasPrefix(d.Name(), ".") {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 

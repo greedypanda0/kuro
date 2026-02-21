@@ -11,7 +11,7 @@ type Stage struct {
 
 func AddStageFile(db DBTX, path string) error {
 	_, err := db.Exec(
-		"INSERT OR IGNORE INTO staged_files (path) VALUES (?)",
+		"UPSERT INTO staged_files (path) VALUES (?)",
 		path,
 	)
 	return err
