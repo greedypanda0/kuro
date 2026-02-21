@@ -47,11 +47,8 @@ var remoteAddCommand = &cobra.Command{
 	Use:   "add <name>",
 	Short: "Add remote",
 	Long:  "Add remote",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			ui.Println(ui.Error("Invalid arguments"))
-			return errors.New("invalid arguments")
-		}
 		remote := args[0]
 
 		root, err := config.RepoRoot()
