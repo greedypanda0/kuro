@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"github.com/greedypanda0/kuro/cli/internal/config"
-	"github.com/greedypanda0/kuro/cli/internal/ui"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/greedypanda0/kuro/cli/internal/config"
+	"github.com/greedypanda0/kuro/cli/internal/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -47,7 +48,7 @@ var whoamicommand = &cobra.Command{
 
 			if resp.StatusCode != http.StatusOK {
 				ui.Println(ui.Error(fmt.Sprintf("request failed: %s", resp.Status)))
-				return err
+				return fmt.Errorf("request failed: %s", resp.Status)
 			}
 
 			var data struct {

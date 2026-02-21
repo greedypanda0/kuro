@@ -86,7 +86,7 @@ var logsCommand = &cobra.Command{
 		}
 
 		sort.Slice(snapshots, func(i, j int) bool {
-			return snapshots[i].Timestamp < snapshots[j].Timestamp
+			return snapshots[i].Timestamp > snapshots[j].Timestamp
 		})
 
 		for _, snapshot := range snapshots {

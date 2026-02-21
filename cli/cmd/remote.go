@@ -60,11 +60,15 @@ var remoteAddCommand = &cobra.Command{
 			return err
 		}
 
-		i := strings.LastIndex(remote, "/")
-		j := strings.LastIndex(remote[:i], "/")
+		trimmed := strings.Trim(remote, "/")
+		parts := strings.Split(trimmed, "/")
+		if len(parts) < 2 {
+			ui.Println(ui.Error("Invalid remote format. Use <user>/<repo> or a URL ending with that."))
+			return errors.New("invalid remote format")
+		}
 
-		repo := remote[i+1:]
-		user := remote[j+1 : i]
+		repo := parts[len(parts)-1]
+		user := parts[len(parts)-2]
 
 		database, err := db.OpenDB(config.DatabasePathFor(root))
 		if err != nil {
@@ -74,9 +78,13 @@ var remoteAddCommand = &cobra.Command{
 		defer database.Close()
 
 		_, configError := db.GetConfig(database, "remote")
-		if !errors.Is(configError, coreerrors.ErrDataNotFound) {
+		if configError == nil {
 			ui.Println(ui.Error("Remote already exists"))
-			return err
+			return errors.New("remote already exists")
+		}
+		if !errors.Is(configError, coreerrors.ErrDataNotFound) {
+			ui.Println(ui.Error("Failed to check remote"))
+			return configError
 		}
 
 		if err := db.SetConfig(database, "remote", user+"/"+repo); err != nil {

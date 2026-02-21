@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
@@ -55,13 +54,15 @@ var pushCommand = &cobra.Command{
 
 		file, err := os.Open(config.DatabasePathFor(root))
 		if err != nil {
-			log.Fatal(err)
+			ui.Println(ui.Error("Failed to open database file"))
+			return err
 		}
 		defer file.Close()
 
 		req, err := http.NewRequest("POST", config.ApiUrl+"/repositories", file)
 		if err != nil {
-			log.Fatal(err)
+			ui.Println(ui.Error("Failed to create request"))
+			return err
 		}
 
 		req.Header.Set("Content-Type", "application/octet-stream")
@@ -71,9 +72,15 @@ var pushCommand = &cobra.Command{
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Fatal(err)
+			ui.Println(ui.Error("Failed to send request"))
+			return err
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			ui.Println(ui.Error(fmt.Sprintf("Push failed: %s", resp.Status)))
+			return fmt.Errorf("push failed: %s", resp.Status)
+		}
 
 		ui.Println(ui.Success("Successfully pushed the .db"))
 
