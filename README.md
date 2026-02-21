@@ -1,142 +1,28 @@
 # Kuro VCS
 
-**Kuro** is a local-first version control system built with **Go** and **SQLite**, focused on correctness, explicit state, and simple internal invariants.
+**Kuro** is a local-first version control system built in **Go** with **SQLite**.  
+This repository currently focuses on the **core engine** and the **CLI**. The API is under development.
 
-Instead of scattering repository state across files and directories, Kuro stores all core metadata in a single SQLite database, making branching, snapshots, and history explicit and inspectable.
-
-> *Kuro (黒) means “black” in Japanese — representing a clean slate and a deliberate starting point.*
-
----
-
-## Why Kuro?
-
-Git is powerful, but it relies heavily on implicit behavior, loose files, and historical complexity.
-
-Kuro explores a different design space:
-
-* **Explicit state over implicit magic**
-* **SQLite-backed storage instead of ad-hoc files**
-* **Clear separation of refs, snapshots, and configuration**
-* **Local-first correctness before synchronization**
-
-Kuro is not trying to “replace Git overnight”.
-It is an experiment in building a **simpler, more transparent VCS core**.
+> *Kuro (黒) means “black” in Japanese — a clean slate and deliberate starting point.*
 
 ---
 
-## Design Philosophy
+## What Kuro Is (Today)
 
-* **Branches are refs** — names that may or may not point to a snapshot
-* **Commits are snapshots** — immutable state captured explicitly
-* **HEAD never dangles** — it always points to a ref
-* **Unborn branches are valid** — no fake commits, no hacks
-* **Local correctness comes first** — syncing is layered on later
+Kuro explores a **transparent, explicit** VCS design:
 
-If something exists in the repository, it should be visible, queryable, and understandable.
+- Repository state is stored in a single SQLite database
+- Refs, snapshots, and config are **first-class** concepts
+- The CLI is a thin orchestration layer over the core
 
 ---
 
-## Architecture
+## Core Concepts
 
-Kuro is structured as a set of layered components:
-
-* **Core**
-
-  * SQLite-based storage engine
-  * Refs, snapshots, objects, and config
-  * No UI, no logging, no side effects
-
-* **CLI**
-
-  * Cobra-based command interface
-  * Human-friendly output
-  * Thin orchestration over core logic
-
-* **Local API (planned)**
-
-  * HTTP API for local repository access
-  * Enables tooling and UI integration
-
-* **Remote API (planned)**
-
-  * Synchronization service
-  * Push / pull semantics built on explicit state
-
-* **Web UI (planned)**
-
-  * Next.js-based interface
-  * Repository inspection and management via local API
-
----
-
-## Current Features
-
-* Repository initialization
-* SQLite-backed repository storage
-* Branch creation, listing, deletion
-* Explicit HEAD and ref management
-* Cross-platform CLI (Windows, Linux, macOS)
-
----
-
-## Planned Features
-
-* File tracking and commits
-* Snapshot history and diffing
-* Checkout and detached HEAD
-* Local HTTP API
-* Remote synchronization (push / pull)
-* Web-based repository browser
-* Collaboration workflows
-
----
-
-## Getting Started
-
-### Prerequisites
-
-* Go **1.19+**
-
-### Build
-
-```bash
-git clone <repository-url>
-cd kuro
-
-cd cli
-go build -o kuro
-```
-
-### Initialize a Repository
-
-```bash
-./kuro init
-```
-
-This creates a `.kuro/` directory containing the SQLite database and repository metadata.
-
----
-
-## Branch Management
-
-```bash
-# List branches
-./kuro branch list
-
-# Create a branch
-./kuro branch add dev
-
-# Delete a branch
-./kuro branch delete dev
-```
-
-Example output:
-
-```
-→ main
-• dev
-• feature-x
-```
+- **Refs**: branch names that point to snapshots (or remain unborn)
+- **Snapshots**: immutable commits captured as explicit records
+- **Objects**: content-addressed blobs stored in SQLite
+- **HEAD**: always points to a ref (never a detached orphan)
 
 ---
 
@@ -144,57 +30,129 @@ Example output:
 
 ```
 kuro/
+├── core/          # Core VCS engine (SQLite-backed)
 ├── cli/           # Command-line interface
-├── core/          # Core VCS logic and database
-├── local-api/     # Local HTTP API (planned)
-├── remote-api/    # Remote sync service (planned)
-├── web/           # Web interface (planned)
+├── api/           # API layer (in development)
 ├── go.work
-└── .gitignore
+└── README.md
 ```
 
 ---
 
-## Development Notes
+## Features (Core + CLI)
 
-* `.kuro/` is intentionally ignored by Git
-* The core package contains **no UI or logging**
-* CLI output is handled explicitly via a UI layer
-* SQLite schema models VCS concepts directly (refs, snapshots, objects)
-
----
-
-## Status
-
-Kuro is under **active development**.
-
-The current focus is on:
-
-* solid core abstractions
-* clean branch and ref semantics
-* building a foundation that can evolve safely
-
-Breaking changes are expected at this stage.
+- Initialize a repository
+- SQLite-backed storage (refs, snapshots, objects)
+- Branch create / list / delete
+- Add & stage files
+- Commit snapshots
+- Checkout refs or snapshots (workspace reset with `--ws`)
+- Status & logs
+- Raw SQL queries against the repo database (`sql`)
+- Config and auth management
+- Remote management and push
+- Identity check (`whoami`)
 
 ---
 
-## Contributing
+## Getting Started
 
-Contributions, feedback, and design discussion are welcome.
+### Prerequisites
+- Go **1.19+**
 
-If you’re interested in:
+### Build the CLI
 
-* VCS internals
-* database-backed systems
-* explicit state machines
-* building tools from first principles
+```
+git clone <repository-url>
+cd kuro/cli
+go build -o kuro
+```
 
-you’ll feel at home here.
+### Initialize a Repo
+
+```
+./kuro init
+```
+
+This creates a `.kuro/` directory containing the SQLite database and metadata.
+
+---
+
+## CLI Examples
+
+### Stage Files
+```
+./kuro add .
+```
+
+### Commit
+```
+./kuro commit -m "Initial snapshot"
+```
+
+### Status
+```
+./kuro status --stage
+```
+
+### Logs
+```
+./kuro logs
+```
+
+### Branches
+```
+./kuro branch list
+./kuro branch create dev
+./kuro branch delete dev
+```
+
+### Checkout
+
+- Switch HEAD only (no workspace changes):
+```
+./kuro checkout dev
+```
+
+- Reset workspace to snapshot:
+```
+./kuro checkout dev --ws
+```
+
+---
+
+## CLI Command Reference
+
+- `init` — initialize a repository
+- `add <path>` — stage a file or directory
+- `remove <path>` — unstage a file or directory
+- `remove .` — clear the entire stage
+- `status` — show current branch and last commit
+- `status --stage` — list staged files
+- `commit -m "<message>"` — create a snapshot from staged files
+- `logs` — show commit history for HEAD
+- `logs --branch <name>` — show logs for a specific branch
+- `branch list` — list branches
+- `branch create <name>` — create a branch
+- `branch delete <name>` — delete a branch
+- `checkout [branch|commit]` — move HEAD to a branch or snapshot
+- `checkout [branch|commit] --ws` — reset workspace to a snapshot
+- `config --name "<name>"` — set local user name
+- `config --token "<token>"` — set auth token
+- `remote` — show current remote
+- `remote add <user>/<repo>` — set remote
+- `remote remove` — remove remote
+- `push` — push the local database to the remote
+- `whoami` — show local user and verify token remotely
+- `sql "<query>"` — run raw SQL against the repository database
+
+## Development Status
+
+The **core engine** and **CLI** are active and usable.  
+The **API** is under development and intentionally out of scope for this README.
 
 ---
 
 ## License
 
 [MIT](./LICENSE)
-
----
