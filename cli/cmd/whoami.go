@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var Whoamicommand = &cobra.Command{
+var whoamicommand = &cobra.Command{
 	Use:          "whoami",
 	Short:        "check your auth token",
 	Long:         "check who are you",
@@ -69,5 +69,5 @@ var Whoamicommand = &cobra.Command{
 }
 
 func init() {
-	rootCommand.AddCommand(Whoamicommand)
+	rootCommand.AddCommand(whoamicommand)
 }

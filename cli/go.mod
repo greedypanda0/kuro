@@ -4,7 +4,7 @@ go 1.24.6
 
 require (
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/greedypanda0/kuro/core v0.1.0
+	github.com/greedypanda0/kuro/core v0.1.1
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.27.1
 )

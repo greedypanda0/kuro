@@ -16,6 +16,7 @@ var configCommand = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, _ := cmd.Flags().GetString("name")
 		token, _ := cmd.Flags().GetString("token")
+		
 		cfg, err := config.LoadConfig()
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -32,7 +33,7 @@ var configCommand = &cobra.Command{
 		if token != "" {
 			cfg.Token = token
 		}
-
+		
 		if err := config.SaveConfig(cfg); err != nil {
 			ui.Println(ui.Error("Failed to save config."))
 			return err

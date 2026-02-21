@@ -1,16 +1,16 @@
 package cmd
 
 import (
-	"bytes"
-	"github.com/greedypanda0/kuro/cli/internal/config"
-	"github.com/greedypanda0/kuro/cli/internal/ui"
-	coredb "github.com/greedypanda0/kuro/core/db"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"os"
-	"path/filepath"
+
+	"github.com/greedypanda0/kuro/cli/internal/config"
+	"github.com/greedypanda0/kuro/cli/internal/ui"
+	"github.com/greedypanda0/kuro/core/db"
+	coreerrors "github.com/greedypanda0/kuro/core/errors"
 
 	"github.com/spf13/cobra"
 )
@@ -27,12 +27,12 @@ var pushCommand = &cobra.Command{
 			return err
 		}
 
-		db, err := coredb.OpenDB(config.DatabasePathFor(root))
+		database, err := db.OpenDB(config.DatabasePathFor(root))
 		if err != nil {
 			ui.Println(ui.Error("Failed to open repository"))
 			return err
 		}
-		defer db.Close()
+		defer database.Close()
 
 		cfg, err := config.LoadConfig()
 		if err != nil {
@@ -43,97 +43,39 @@ var pushCommand = &cobra.Command{
 			ui.Println(ui.Error("No token found"))
 			return nil
 		}
-		wd, err := os.Getwd()
-		if err != nil {
-			ui.Println(ui.Error("Failed to get current working directory"))
+
+		remote, err := db.GetConfig(database, "remote")
+		if errors.Is(err, coreerrors.ErrDataNotFound) {
+			ui.Println(ui.Error("Remote not found"))
+			return nil
+		} else if err != nil {
+			ui.Println(ui.Error("Failed to get remote"))
 			return err
 		}
 
-		rootName := filepath.Base(wd)
-
-		head, err := coredb.GetConfig(db, "head")
+		file, err := os.Open(config.DatabasePathFor(root))
 		if err != nil {
-			ui.Println(ui.Error("Failed to read head ref"))
-			return err
+			log.Fatal(err)
 		}
-		ref, err := coredb.GetRef(db, head)
+		defer file.Close()
+
+		req, err := http.NewRequest("POST", config.ApiUrl+"/repositories", file)
 		if err != nil {
-			ui.Println(ui.Error("Failed to resolve head ref"))
-			return err
+			log.Fatal(err)
 		}
 
-		// snapshot
-		snapshot, err := coredb.GetSnapshot(db, *ref.SnapshotHash)
-		if err != nil {
-			ui.Println(ui.Error("Failed to get snapshot"))
-			return err
-		}
-
-		// files
-		files, err := coredb.ListSnapshotFiles(db, snapshot.Hash)
-		if err != nil {
-			ui.Println(ui.Error("Failed to list snapshot files"))
-			return err
-		}
-
-		// objects
-		var objects []*coredb.Object
-		for _, file := range files {
-			object, err := coredb.GetObject(db, file.ObjectHash)
-			if err != nil {
-				ui.Println(ui.Error("Failed to get object"))
-				return err
-			}
-			objects = append(objects, object)
-		}
-
-		payload := map[string]any{
-			"metadata": map[string]string{
-				"name": rootName,
-				"head": head,
-			},
-			"ref":      ref,
-			"snapshot": snapshot,
-			"files":    files,
-			"objects":  objects,
-		}
-		payloadBytes, err := json.Marshal(payload)
-		if err != nil {
-			ui.Println(ui.Error("Failed to encode request body"))
-			return err
-		}
-		body := bytes.NewReader(payloadBytes)
-
-		req, err := http.NewRequest("POST", config.ApiUrl+"/repositories", body)
-		if err != nil {
-			ui.Println(ui.Error("Failed to create request"))
-			return err
-		}
-		req.Header.Set("Authorization", "Bearer "+cfg.Token)
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", "application/octet-stream")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cfg.Token))
+		req.Header.Set("X-Remote", remote)
 
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			ui.Println(ui.Error("Failed to send request"))
-			return err
+			log.Fatal(err)
 		}
 		defer resp.Body.Close()
 
-		respBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			ui.Println(ui.Error("Failed to read response"))
-			return err
-		}
-
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			ui.Println(ui.Error("Push failed: " + string(respBody)))
-			return fmt.Errorf("push failed with status %s", resp.Status)
-		}
-
-		if len(respBody) > 0 {
-			ui.Println(string(respBody))
-		}
+		ui.Println(ui.Success("Successfully pushed the .db"))
 
 		return nil
 	},
