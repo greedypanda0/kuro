@@ -109,11 +109,12 @@ var addCommand = &cobra.Command{
 		}
 
 		ui.Println(ui.Step(fmt.Sprintf("Staging %d file(s)...", total)))
+		defer fmt.Print("\n")
 
 		err = coredb.WithTx(context.Background(), db, func(tx coredb.DBTX) error {
 			for i, file := range filesToStage {
 				ratio := float64(i+1) / float64(total)
-				ui.Println(ui.Progress(30, ratio))
+				fmt.Printf("\r%s", ui.Progress(30, ratio))
 
 				if err := coredb.AddStageFile(tx, file); err != nil {
 					return err
