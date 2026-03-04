@@ -1,19 +1,47 @@
 # Kuro VCS
 
 **Kuro** is a local-first version control system built in **Go** with **SQLite**.  
-This repository currently focuses on the **core engine** and the **CLI**. The API is under development.
+This repository focuses on the **core engine** and **CLI**, with a **remote API** under development.
 
 > *Kuro (黒) means “black” in Japanese — a clean slate and deliberate starting point.*
 
 ---
 
-## What Kuro Is (Today)
+## Index
 
-Kuro explores a **transparent, explicit** VCS design:
+1. [Overview](#overview)
+2. [Project Structure](#project-structure)
+3. [Core Concepts](#core-concepts)
+4. [Features](#features)
+5. [Getting Started](#getting-started)
+6. [CLI Usage](#cli-usage)
+7. [Configuration & Storage](#configuration--storage)
+8. [Remote API](#remote-api)
+9. [Development Notes](#development-notes)
+10. [License](#license)
+
+---
+
+## Overview
+
+Kuro explores a transparent, explicit VCS design:
 
 - Repository state is stored in a single SQLite database
 - Refs, snapshots, and config are **first-class** concepts
-- The CLI is a thin orchestration layer over the core
+- The CLI is a thin orchestration layer over the core engine
+
+---
+
+## Project Structure
+
+```
+kuro/
+├── core/          # Core VCS engine (SQLite-backed)
+├── cli/           # Command-line interface
+├── api/remote/    # Remote API server
+├── go.work
+└── README.md
+```
 
 ---
 
@@ -26,20 +54,7 @@ Kuro explores a **transparent, explicit** VCS design:
 
 ---
 
-## Project Structure
-
-```
-kuro/
-├── core/          # Core VCS engine (SQLite-backed)
-├── cli/           # Command-line interface
-├── api/           # API layer (in development)
-├── go.work
-└── README.md
-```
-
----
-
-## Features (Core + CLI)
+## Features
 
 - Initialize a repository
 - SQLite-backed storage (refs, snapshots, objects)
@@ -48,6 +63,7 @@ kuro/
 - Commit snapshots
 - Checkout refs or snapshots (workspace reset with `--ws`)
 - Status & logs
+- Diff for staged files (`diff`)
 - Raw SQL queries against the repo database (`sql`)
 - Config and auth management
 - Remote management and push
@@ -58,10 +74,9 @@ kuro/
 ## Getting Started
 
 ### Prerequisites
-- Go **1.19+**
+- Go **1.19+** (or your target Go version)
 
 ### Build the CLI
-
 ```
 git clone <repository-url>
 cd kuro/cli
@@ -69,7 +84,6 @@ go build -o kuro
 ```
 
 ### Initialize a Repo
-
 ```
 ./kuro init
 ```
@@ -78,7 +92,7 @@ This creates a `.kuro/` directory containing the SQLite database and metadata.
 
 ---
 
-## CLI Examples
+## CLI Usage
 
 ### Stage Files
 ```
@@ -94,10 +108,18 @@ This creates a `.kuro/` directory containing the SQLite database and metadata.
 ```
 ./kuro status --stage
 ```
+With `--stage`, Kuro lists staged files and unstaged files (prefixed with `-`).
+
+### Diff
+```
+./kuro diff
+./kuro diff -f path/to/file
+```
 
 ### Logs
 ```
 ./kuro logs
+./kuro logs --branch main
 ```
 
 ### Branches
@@ -108,7 +130,6 @@ This creates a `.kuro/` directory containing the SQLite database and metadata.
 ```
 
 ### Checkout
-
 - Switch HEAD only (no workspace changes):
 ```
 ./kuro checkout dev
@@ -119,37 +140,116 @@ This creates a `.kuro/` directory containing the SQLite database and metadata.
 ./kuro checkout dev --ws
 ```
 
+### Raw SQL
+```
+./kuro sql "SELECT name, snapshot_hash FROM refs"
+```
+
 ---
 
-## CLI Command Reference
+## Configuration & Storage
 
-- `init` — initialize a repository
-- `add <path>` — stage a file or directory
-- `remove <path>` — unstage a file or directory
-- `remove .` — clear the entire stage
-- `status` — show current branch and last commit
-- `status --stage` — list staged files
-- `commit -m "<message>"` — create a snapshot from staged files
-- `logs` — show commit history for HEAD
-- `logs --branch <name>` — show logs for a specific branch
-- `branch list` — list branches
-- `branch create <name>` — create a branch
-- `branch delete <name>` — delete a branch
-- `checkout [branch|commit]` — move HEAD to a branch or snapshot
-- `checkout [branch|commit] --ws` — reset workspace to a snapshot
-- `config --name "<name>"` — set local user name
-- `config --token "<token>"` — set auth token
-- `remote` — show current remote
-- `remote add <user>/<repo>` — set remote
-- `remote remove` — remove remote
-- `push` — push the local database to the remote
-- `whoami` — show local user and verify token remotely
-- `sql "<query>"` — run raw SQL against the repository database
+### Repository Layout
+- `.kuro/kuro.db` — SQLite database
+- `.kuro/.kuroignore` — ignore rules
 
-## Development Status
+### User Config
+Stored at:
+- `~/.kuro/config.json`
 
-The **core engine** and **CLI** are active and usable.  
-The **API** is under development and intentionally out of scope for this README.
+Fields:
+- `name` — author name used in commits
+- `token` — auth token used for remote API
+
+Set via:
+```
+./kuro config --name "Your Name"
+./kuro config --token "your-token"
+```
+
+### `.kuroignore`
+Default entries created on `init`:
+```
+.kuro
+.git
+node_modules
+dist
+build
+```
+
+---
+
+## Remote API
+
+The remote API is a Gin server backed by PostgreSQL.
+
+### Environment
+
+See `.env.example` in:
+- `/` (root)
+- `api/remote/`
+- `cli/`
+- `core/`
+
+The remote API uses:
+- `DATABASE_URL` (required)
+- `REMOTE_HTTP_ADDR`
+- `REMOTE_HTTP_SHUTDOWN_TIMEOUT`
+- `REMOTE_LOG_LEVEL`
+- `REMOTE_LOG_DEV`
+
+### Auth
+
+All `/api/*` endpoints are protected by auth middleware:
+
+- `Authorization: Bearer <token>`  
+**or**
+- session cookies (`authjs.session-token` / `__Secure-authjs.session-token`)
+
+### Endpoints
+
+Base: `http://localhost:8080/api`
+
+#### Utility
+- `GET /health` — health check
+- `GET /version` — build info
+- `GET /ping` — returns auth user context
+
+#### Repositories
+- `GET /repositories?name=&user_id=` — list repositories
+- `GET /repositories/:id` — get repository by id
+- `POST /repositories` — upload repo database
+
+**Upload requirements:**
+- `Content-Type: application/octet-stream`
+- `Authorization: Bearer <token>`
+- `X-Remote: <user>/<repo>`
+
+#### Refs
+- `GET /repositories/:id/refs` — list refs
+- `GET /repositories/:id/refs/:ref` — get ref by name
+
+#### Objects
+- `GET /repositories/:id/objects` — list object hashes
+- `GET /repositories/:id/objects/:hash` — get object content
+
+#### Snapshots
+- `GET /repositories/:id/snapshots`
+- `GET /repositories/:id/snapshots/:snapshot_id`
+- `GET /repositories/:id/snapshots/:snapshot_id/files`
+- `GET /repositories/:id/snapshots/:snapshot_id/files/*file_id`
+
+#### Users
+- `GET /users/me` — current user
+- `GET /users?name=&page=&limit=` — list users (paged)
+
+---
+
+## Development Notes
+
+- This repo uses Go workspaces (`go.work`) for local module development.
+- The CLI depends on the core module.
+- The remote API is isolated under `api/remote`.
 
 ---
 

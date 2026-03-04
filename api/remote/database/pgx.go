@@ -45,10 +45,5 @@ func OpenDB() (*pgxpool.Pool, error) {
 		return nil, err
 	}
 
-	if _, err := pool.Exec(context.Background(), schema); err != nil {
-		pool.Close()
-		return nil, err
-	}
-
 	return pool, nil
 }

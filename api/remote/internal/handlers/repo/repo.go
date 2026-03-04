@@ -1,26 +1,17 @@
 package repo
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
+	"github.com/greedypanda0/kuro/api/remote/database"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type Repository struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	UserID    string    `json:"user_id"`
-	CreatedAt time.Time `json:"created_at"`
-}
 
 func RegisterRepositoryRoutes(router gin.IRoutes, db *pgxpool.Pool) {
 	router.GET("/repositories", getRepositoriesHandler(db))
@@ -69,10 +60,10 @@ func getRepositoriesHandler(db *pgxpool.Pool) gin.HandlerFunc {
 		}
 		defer rows.Close()
 
-		var repos []Repository
+		var repos []database.Repository
 
 		for rows.Next() {
-			var r Repository
+			var r database.Repository
 			if err := rows.Scan(
 				&r.ID,
 				&r.Name,
@@ -101,48 +92,27 @@ func getRepositoriesHandler(db *pgxpool.Pool) gin.HandlerFunc {
 
 func getRepositoryHandler(db *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-
 		id := c.Param("id")
-
-		query := `
-			SELECT id, name, user_id, created_at
-			FROM repositories
-			WHERE id = $1
-		`
-
-		row := db.QueryRow(ctx, query, id)
-
-		var r Repository
-		err := row.Scan(
-			&r.ID,
-			&r.Name,
-			&r.UserID,
-			&r.CreatedAt,
-		)
-
+		repo, err := database.GetRepo(db, c, id)
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, gin.H{
-					"error": "repository not found",
-				})
-				return
-			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "failed to fetch repository",
+		if repo == nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "repo not found",
 			})
 			return
 		}
 
-		c.JSON(http.StatusOK, r)
+		c.JSON(http.StatusOK, repo)
 	}
 }
 
 func postRepositoryHandler(db *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.MustGet("user_id").(string)
-		ctx := c.Request.Context()
 
 		if !strings.HasPrefix(c.ContentType(), "application/octet-stream") {
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{
@@ -165,17 +135,23 @@ func postRepositoryHandler(db *pgxpool.Pool) gin.HandlerFunc {
 
 		remoteParts := strings.SplitN(remote, "/", 2)
 		// user := remoteParts[0]
-		repo := remoteParts[1]
-		row := db.QueryRow(ctx, "SELECT user_id FROM repositories WHERE name = $1", repo)
-		var repoUserID string
-		if err := row.Scan(&repoUserID); err != nil {
+		repoName := remoteParts[1]
+		repo, err := database.GetRepo(db, c, repoName)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "failed to fetch user",
+				"error": err.Error(),
 			})
 			return
 		}
-		
-		if repoUserID != userID {
+
+		if repo == nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "repo not found",
+			})
+			return
+		}
+
+		if repo.UserID != userID {
 			c.JSON(http.StatusForbidden, gin.H{
 				"error": "repository does not belong to user",
 			})
@@ -190,7 +166,7 @@ func postRepositoryHandler(db *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		dstPath := filepath.Join(dirPath, "temp_"+repo+".db")
+		dstPath := filepath.Join(dirPath, "temp_"+repo.Name+".db")
 
 		dstFile, err := os.Create(dstPath)
 		if err != nil {
@@ -221,8 +197,8 @@ func postRepositoryHandler(db *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		finalPath := filepath.Join(dirPath, repo+".db")
-		tempPath := filepath.Join(dirPath, "temp_"+repo+".db")
+		finalPath := filepath.Join(dirPath, repo.Name+".db")
+		tempPath := filepath.Join(dirPath, "temp_"+repo.Name+".db")
 
 		if err := os.Remove(finalPath); err != nil && !os.IsNotExist(err) {
 			c.JSON(http.StatusInternalServerError, gin.H{

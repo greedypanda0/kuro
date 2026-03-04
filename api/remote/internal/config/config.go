@@ -29,7 +29,7 @@ func Load() Config {
 		},
 		Log: LogConfig{
 			Level:       "info",
-			Development: true,
+			Development: false,
 		},
 	}
 

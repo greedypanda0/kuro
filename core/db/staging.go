@@ -11,7 +11,7 @@ type Stage struct {
 
 func AddStageFile(db DBTX, path string) error {
 	_, err := db.Exec(
-		"UPSERT INTO staged_files (path) VALUES (?)",
+		"INSERT INTO staged_files (path) VALUES (?) ON CONFLICT(path) DO UPDATE SET staged_at = (strftime('%s', 'now'))",
 		path,
 	)
 	return err

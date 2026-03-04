@@ -32,6 +32,9 @@ func RegisterRoutes(router *gin.Engine, log *logger.Logger, db *pgxpool.Pool) {
 	apiRouter.GET("/version", versionHandler())
 	RegisterPingRoutes(apiRouter)
 	repo.RegisterRepositoryRoutes(apiRouter, db)
+	repo.RegisterRefsRoutes(apiRouter, db)
+	repo.RegisterObjectsRoutes(apiRouter, db)
+	repo.RegisterSnapshotsRoutes(apiRouter, db)
 	users.RegisterUserRoutes(apiRouter, db)
 
 }
